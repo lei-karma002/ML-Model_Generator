@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Synthetic Data Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #000000;
+        }
+
+        .workflow-container {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #000000;
+        }
+
+        .workflow-step {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: rgb(255, 255, 255);
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgb(255, 255, 255);
+        }
+
+        .workflow-step h3 {
+            color: #000000;
+            margin-bottom: 15px;
+        }
+
+        .container {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        h1, h2, h3 {
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+
+        .class-input {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+
+        input, select {
+            margin: 5px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #db34ba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .remove-btn {
+            background-color: #e74c3c;
+        }
+
+        .remove-btn:hover {
+            background-color: #c0392b;
+        }
+
+        #visualizations {
+            margin-top: 20px;
+        }
+
+        #visualizations img {
+            max-width: 100%;
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #simulationInputs {
+            display: none;
+        }
+
+        .simulation-result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background-color: #2ecc71;
+            color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 1000;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        .loader-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 5px solid #db34ba;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .loader-text {
+            color: white;
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="workflow-container">
+        <h1>Synthetic Data Generator</h1>
+        
+        <!-- Step 1: Generate Data -->
+        <div class="workflow-step">
+            <h3>Step 1: Generate Data</h3>
+            <div>
+                <label>Data Type:</label>
+                <select id="dataType" onchange="toggleDataTypeOptions()">
+                    <option value="classification">Classification</option>
+                    <option value="regression">Regression</option>
+                </select>
+            </div>
+
+            <div id="classificationOptions">
+                <div>
+                    <label>Number of Features:</label>
+                    <input type="number" id="nFeatures" value="3" min="2">
+                </div>
+                <div id="classInputs">
+                    <div class="class-input">
+                        <input type="text" placeholder="Class Name" value="Class_1">
+                        <input type="number" placeholder="Number of Samples" value="100" min="1">
+                        <button class="remove-btn" onclick="removeClass(this)">Remove</button>
+                    </div>
+                </div>
+                <button onclick="addClass()">Add Class</button>
+            </div>
+
+            <div id="regressionOptions" style="display: none;">
+                <div>
+                    <label>Number of Features:</label>
+                    <input type="number" id="regressionFeatures" value="3" min="1">
+                </div>
+                <div>
+                    <label>Number of Samples:</label>
+                    <input type="number" id="nSamples" value="1000" min="100">
+                </div>
+            </div>
+
+            <button onclick="generateData()">Generate Data</button>
+        </div>
+
+        <!-- Step 2: EDA -->
+        <div class="workflow-step">
+            <h3>Step 2: Exploratory Data Analysis</h3>
+            <button onclick="performEDA()">Perform EDA</button>
+            <div id="visualizations"></div>
+        </div>
+
+        <!-- Step 3: Train Model -->
+        <div class="workflow-step">
+            <h3>Step 3: Train Model</h3>
+            <div>
+                <label>Training Set Size (%):</label>
+                <input type="number" id="trainSize" value="80" min="10" max="90">
+            </div>
+            <div>
+                <label>Algorithm:</label>
+                <select id="algorithm">
+                    <option value="rf">Random Forest</option>
+                    <option value="lr">Linear Regression</option>
+                </select>
+            </div>
+            <button onclick="trainModel()">Train Model</button>
+            <div>
+                <p id="trainMetric"></p>
+                <p id="testMetric"></p>
+            </div>
+            <button onclick="downloadModel()">Download Model</button>
+        </div>
+
+        <!-- Step 4: Simulation -->
+        <div class="workflow-step">
+            <h3>Step 4: Run Simulations</h3>
+            <div id="simulationInputs">
+                <div>
+                    <label>Number of Simulations:</label>
+                    <input type="number" id="nSimulations" value="1000" min="100" max="10000">
+                </div>
+                <div id="featureInputs">
+                    <!-- Will be dynamically populated -->
+                </div>
+                <button onclick="runSimulation()">Run Simulation</button>
+            </div>
+            <div id="simulationResults" class="simulation-result hidden">
+                <div id="simulationStats"></div>
+                <div id="simulationPlot"></div>
+            </div>
+        </div>
+        <!-- Step 5: Evaluation and Analysis -->
+        <div class="workflow-step">
+            <h3>Step 5: Evaluation and Analysis</h3>
+            <button onclick="evaluateModel()">Evaluate Model</button>
+            <div id="evaluationResults" class="simulation-result hidden">
+                <h4>Evaluation Metrics:</h4>
+                <div id="metrics"></div>
+                <h4>Visualizations:</h4>
+                <div id="evaluationPlots"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        function showLoader(message = 'Processing...') {
+            const loaderContainer = document.querySelector('.loader-container');
+            const loaderText = document.querySelector('.loader-text');
+            loaderText.textContent = message;
+            loaderContainer.style.display = 'flex';
+        }
+
+        function hideLoader() {
+            const loaderContainer = document.querySelector('.loader-container');
+            loaderContainer.style.display = 'none';
+        }
+
+
+        function toggleDataTypeOptions() {
+            const dataType = document.getElementById('dataType').value;
+            document.getElementById('classificationOptions').style.display = 
+                dataType === 'classification' ? 'block' : 'none';
+            document.getElementById('regressionOptions').style.display = 
+                dataType === 'regression' ? 'block' : 'none';
+        }
+
+        function addClass() {
+            const classInputs = document.getElementById('classInputs');
+            const newClass = document.createElement('div');
+            newClass.className = 'class-input';
+            newClass.innerHTML = `
+                <input type="text" placeholder="Class Name" value="Class_${classInputs.children.length + 1}">
+                <input type="number" placeholder="Number of Samples" value="100" min="1">
+                <button class="remove-btn" onclick="removeClass(this)">Remove</button>
+            `;
+            classInputs.appendChild(newClass);
+        }
+
+        function removeClass(button) {
+            button.parentElement.remove();
+        }
+
+        function showNotification(message, duration = 3000) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, duration);
+        }
+
+        function generateData() {
+            showLoader('Generating data...');
+            const formData = new FormData();
+            formData.append('dataType', document.getElementById('dataType').value);
+            
+            if (document.getElementById('dataType').value === 'classification') {
+                formData.append('nFeatures', document.getElementById('nFeatures').value);
+                
+                const classInputs = document.querySelectorAll('.class-input');
+                classInputs.forEach(input => {
+                    formData.append('className[]', input.children[0].value);
+                    formData.append('classSamples[]', input.children[1].value);
+                });
+            } else if (document.getElementById('dataType').value === 'regression') {
+                formData.append('nFeatures', document.getElementById('regressionFeatures').value);
+                formData.append('nSamples', document.getElementById('nSamples').value);
+            } 
+
+            showNotification('Generating data...');
+
+            fetch('/generate_data', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoader();
+                if (data.success) {
+                    showNotification('Data generated successfully!');
+                    populateFeatureInputs();
+                } else {
+                    showNotification('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                hideLoader();
+                console.error('Error:', error);
+                showNotification('Error generating data');
+            });
+        }
+
+        function trainModel() {
+            showLoader('Training model...');
+            const formData = new FormData();
+            formData.append('algorithm', document.getElementById('algorithm').value);
+            formData.append('trainSize', document.getElementById('trainSize').value);
+
+            showNotification('Training model...');
+
+            fetch('/train', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoader();
+                if (data.success) {
+                    if (data.metric_type === 'accuracy') {
+                        document.getElementById('trainMetric').textContent = 
+                            `Training Accuracy: ${(data.train_accuracy * 100).toFixed(2)}%`;
+                        document.getElementById('testMetric').textContent = 
+                            `Testing Accuracy: ${(data.test_accuracy * 100).toFixed(2)}%`;
+                    } else {
+                        document.getElementById('trainMetric').textContent = 
+                            `Training R² Score: ${data.train_r2.toFixed(4)}`;
+                        document.getElementById('testMetric').textContent = 
+                            `Testing R² Score: ${data.test_r2.toFixed(4)}`;
+                    }
+                    showNotification('Training completed successfully!');
+                    document.getElementById('simulationInputs').style.display = 'block';
+                } else {
+                    showNotification('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                hideLoader();
+                console.error('Error:', error);
+                showNotification('Error training model');
+            });
+        }
+
+        function downloadModel() {
+            window.location.href = '/download_model';
+        }
+
+        function populateFeatureInputs() {
+            const dataType = document.getElementById('dataType').value;
+            const nFeatures = dataType === 'classification' ? 
+                document.getElementById('nFeatures').value : 
+                document.getElementById('regressionFeatures').value;
+            
+            const featureInputs = document.getElementById('featureInputs');
+            featureInputs.innerHTML = '';
+            
+            for (let i = 1; i <= nFeatures; i++) {
+                featureInputs.innerHTML += `
+                    <div>
+                        <label>Feature ${i}:</label>
+                        <input type="number" id="feature_${i}" step="0.1" value="0">
+                    </div>
+                `;
+            }
+        }
+
+        function runSimulation() {
+            showLoader('Running simulation...');
+            const formData = new FormData();
+            formData.append('n_simulations', document.getElementById('nSimulations').value);
+            
+            const featureInputs = document.querySelectorAll('#featureInputs input');
+            featureInputs.forEach(input => {
+                formData.append(input.id, input.value);
+            });
+            
+            showNotification('Running simulation...');
+            
+            fetch('/simulate', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoader();
+                if (data.success) {
+                    const resultsDiv = document.getElementById('simulationResults');
+                    resultsDiv.classList.remove('hidden');
+                    
+                    const statsDiv = document.getElementById('simulationStats');
+                    if (data.statistics.class_probabilities) {
+                        statsDiv.innerHTML = `
+                            <h4>Class Probabilities:</h4>
+                            <ul>
+                                ${Object.entries(data.statistics.class_probabilities)
+                                    .map(([cls, prob]) => 
+                                        `<li>${cls}: ${(prob * 100).toFixed(2)}%</li>`
+                                    ).join('')}
+                            </ul>
+                            <p>Most Likely Class: ${data.statistics.most_likely_class}</p>
+                        `;
+                    } else {
+                        statsDiv.innerHTML = `
+                            <p>Mean: ${data.statistics.mean.toFixed(4)}</p>
+                            <p>Standard Deviation: ${data.statistics.std.toFixed(4)}</p>
+                            <p>95% Confidence Interval: [${data.statistics.ci_lower.toFixed(4)}, 
+                                ${data.statistics.ci_upper.toFixed(4)}]</p>
+                            <p>Range: [${data.statistics.min.toFixed(4)}, 
+                                ${data.statistics.max.toFixed(4)}]</p>
+                        `;
+                    }
+                    
+                    const plotDiv = document.getElementById('simulationPlot');
+                    plotDiv.innerHTML = `<img src="data:image/png;base64,${data.plot}">`;
+                    
+                    showNotification('Simulation completed successfully!');
+                } else {
+                    showNotification('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                hideLoader();
+                console.error('Error:', error);
+                showNotification('Error running simulation');
+            });
+        }
+
+        function performEDA() {
+            showLoader('Performing Exploratory Data Analysis...');
+
+            fetch('/get_eda')
+            .then(response => response.json())
+            .then(data => {
+                hideLoader();
+                if (!data.error) {
+                    const visualizations = document.getElementById('visualizations');
+                    visualizations.innerHTML = `
+                        <h3>Basic Statistics</h3>
+                        ${data.basic_stats}
+                        <h3>Correlation Matrix</h3>
+                        <img src="data:image/png;base64,${data.correlation_plot}">
+                        <h3>Feature Distributions</h3>
+                        <img src="data:image/png;base64,${data.distribution_plot}">
+                        <h3>Target Distribution</h3>
+                        <img src="data:image/png;base64,${data.target_plot}">
+                        <h3>Feature vs Target Relationships</h3>
+                        <img src="data:image/png;base64,${data.scatter_plot}">
+                    `;
+                    showNotification('Exploratory Data Analysis completed successfully!');
+                } else {
+                    showNotification('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                hideLoader();
+                console.error('Error:', error);
+                showNotification('Error performing EDA');
+            });
+        }
+        // Function to trigger model evaluation
+        function evaluateModel() {
+            showLoader('Evaluating model...');
+
+            fetch('/evaluate_model')
+            .then(response => response.json())
+            .then(data => {
+                hideLoader();
+                if (data.success) {
+                    const resultsDiv = document.getElementById('evaluationResults');
+                    resultsDiv.classList.remove('hidden');
+                    
+                    // Display metrics
+                    const metricsDiv = document.getElementById('metrics');
+                    if (data.is_classification) {
+                        metricsDiv.innerHTML = `
+                            <h4>Classification Metrics:</h4>
+                            <p>Accuracy: ${(data.metrics.accuracy * 100).toFixed(2)}%</p>
+                            <p>Precision: ${(data.metrics.precision * 100).toFixed(2)}%</p>
+                            <p>Recall: ${(data.metrics.recall * 100).toFixed(2)}%</p>
+                            <p>F1 Score: ${(data.metrics.f1_score).toFixed(4)}</p>
+                        `;
+                    } else {
+                        metricsDiv.innerHTML = `
+                            <h4>Regression Metrics:</h4>
+                            <p>R² Score: ${data.metrics.r2_score.toFixed(4)}</p>
+                            <p>Mean Squared Error: ${data.metrics.mse.toFixed(4)}</p>
+                            <p>Mean Absolute Error: ${data.metrics.mae.toFixed(4)}</p>
+                            <p>Root Mean Squared Error: ${data.metrics.rmse.toFixed(4)}</p>
+                        `;
+                    }
+                    
+                    // Display visualizations
+                    const plotsDiv = document.getElementById('evaluationPlots');
+                    if (data.is_classification) {
+                        plotsDiv.innerHTML = `
+                            <h4>Confusion Matrix</h4>
+                            <img src="data:image/png;base64,${data.confusion_matrix}" alt="Confusion Matrix">
+                            <h4>ROC Curve</h4>
+                            <img src="data:image/png;base64,${data.roc_curve}" alt="ROC Curve">
+                        `;
+                    } else {
+                        plotsDiv.innerHTML = `
+                            <h4>Residual Plot</h4>
+                            <img src="data:image/png;base64,${data.residual_plot}" alt="Residual Plot">
+                            <h4>Q-Q Plot</h4>
+                            <img src="data:image/png;base64,${data.qq_plot}" alt="Q-Q Plot">
+                            <h4>Actual vs Predicted Values</h4>
+                            <img src="data:image/png;base64,${data.actual_vs_predicted}" alt="Actual vs Predicted">
+                        `;
+                    }
+                    
+                    showNotification('Evaluation completed successfully!');
+                } else {
+                    showNotification('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                hideLoader();
+                console.error('Error:', error);
+                showNotification('Error evaluating model');
+            });
+        }
+
+        // Function to display notifications
+        function showNotification(message, duration = 3000) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, duration);
+        }
+
+        // Initialize with classification options visible
+        toggleDataTypeOptions();
+    </script>
+    <div class="loader-container">
+        <div class="loader"></div>
+        <div class="loader-text">Processing...</div>
+    </div>
+</body>
+</html> 
